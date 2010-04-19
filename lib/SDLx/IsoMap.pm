@@ -126,15 +126,16 @@ sub draw{
    my @tile_coordinates = $self->get_tile_coordinates_in_area 
       ($params{x},$params{y}, $params{x}+$params{w}, $params{y}+$params{h});
    for (@tile_coordinates){
-      $self->_draw_tile ($params{surf}, $_->[0], $_->[1], $params{x}, $params{y},$params{w}, $params{h} );
+      $self->_draw_tile ($params{surf}, $_->[0], $_->[1], $params{u}, $params{v},$params{x}, $params{y},$params{w}, $params{h} );
    }
 }
 
 sub _draw_tile {
-   my ($self, $onto_surf, $tile_x, $tile_y, $u, $v, $w, $h) = @_;
+   my ($self, $onto_surf, $tile_x, $tile_y, $u, $v, $x, $y, $w, $h) = @_;
    my $tile = $self->_tile_at($tile_x,$tile_y);
-   my $u_offset = floor((-$tile_x+$tile_y-1) / $self->_tile_drawn_w/2);
-   my $v_offset = floor( ($tile_x+$tile_y)  /  $self->_tile_drawn_h/2);
+   my $u_offset = floor((-$tile_x+$tile_y-1) * $self->_tile_drawn_w/2);
+   my $v_offset = floor( ($tile_x+$tile_y)  *  $self->_tile_drawn_h/2);
+   warn $u_offset;
    SDL::Video::blit_surface (
       $tile->surf,
       SDL::Rect->new( 0,0,100,100),
