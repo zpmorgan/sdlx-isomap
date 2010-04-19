@@ -3,6 +3,7 @@ use Mouse;
 use Math::Trig;
 use Carp;
 use POSIX qw/floor/;
+use List::Util qw/min max/;
 
 use SDL;
 use SDL::Surface;
@@ -87,7 +88,7 @@ sub _construct_tile {
       base => 0,
       surf => $self->_tile_surfs->{$key},
    );
-   $self->_tiles->{"$x-$y"} = $tile;
+   $self->_tiles->{"$x,$y"} = $tile;
 }
 
 sub _construct_tile_surf{
@@ -112,10 +113,10 @@ sub _construct_tile_surf{
 
 sub _tile_at {
    my ($self, $x, $y) = @_;
-   my $tile = $self->_tiles->{"$x-$y"};
+   my $tile = $self->_tiles->{"$x,$y"};
    unless ($tile) {
       $self->_construct_tile($x,$y);
-      $tile = $self->_tiles->{"$x-$y"};
+      $tile = $self->_tiles->{"$x,$y"};
    }
    die unless $tile;
    return $tile;
@@ -133,38 +134,46 @@ sub draw{
 sub _draw_tile {
    my ($self, $onto_surf, $tile_x, $tile_y, $u, $v, $x, $y, $w, $h) = @_;
    my $tile = $self->_tile_at($tile_x,$tile_y);
-   my $u_offset = floor((-$tile_x+$tile_y-1) * $self->_tile_drawn_w/2);
-   my $v_offset = floor( ($tile_x+$tile_y)  *  $self->_tile_drawn_h/2);
-   warn $u_offset;
+   my $x_offset = floor((-$tile_x+$tile_y-1) * $self->_tile_drawn_w/2);
+   my $y_offset = floor( ($tile_x+$tile_y)  *  $self->_tile_drawn_h/2);
+  # warn $u_offset;
+   my $l_clip = -min(0,$x_offset - $x);
+   my $r_clip = -min(0, $x+$w - ($x_offset+$self->_tile_drawn_w));
+   
+   my $u_clip = -min(0,$y_offset - $y);
+   my $d_clip = -min(0, $y+$h - ($y_offset+$self->_tile_drawn_h));
+#   warn "$y  |  $y_offset   |||  $tile_x   $tile_y  | $d_clip";
    SDL::Video::blit_surface (
       $tile->surf,
-      SDL::Rect->new( 0,0,100,100),
+      SDL::Rect->new( $l_clip,$u_clip, $self->_tile_drawn_w-$l_clip-$r_clip, $self->_tile_drawn_h-$u_clip-$d_clip),
       $onto_surf,
-      SDL::Rect->new($u+$u_offset ,$v+$v_offset, $w,$h),
+      SDL::Rect->new($u+$x_offset+$l_clip , $v+$y_offset+$u_clip , $w-$l_clip-$r_clip, $h-$u_clip-$d_clip),
    );
 }
 
 #returned tiles must be ordered so near stuff comes last.
 #negative axes are up, x axis is sw<->ne
-
+#x1,y2,etc are iso coordinates
 sub get_tile_coordinates_in_area {
    my ($self,$x1,$y1,$x2,$y2) = @_;
    my @tile_coordinates;
-   my $first_tile_row = floor ( ($x1-$self->_tile_drawn_h/2) / $self->_tile_drawn_h);
-   my $last_tile_row =  floor ( ($x2+$self->_tile_drawn_h/2) / $self->_tile_drawn_h);
+   my $first_tile_row = floor ( ($y1) / ($self->_tile_drawn_h/2)) - 1;
+   my $last_tile_row =  floor ( ($y2) / ($self->_tile_drawn_h/2)) ;
+   warn $first_tile_row;
    for my $row ($first_tile_row .. $last_tile_row){
       push @tile_coordinates, $self->_get_tile_row_coordinates_bounded ($row, $x1, $x2);
    }
    return @tile_coordinates;
 }
 
+#x1,x2 are iso coordinates
 sub _get_tile_row_coordinates_bounded {
    my ($self,$row,$x1,$x2) = @_;
    my @tile_coordinates;
-   my $first_tile_x = floor (($x1 + ($row+1)*$self->_tile_drawn_w/2) / $self->_tile_drawn_w);
-   my $last_tile_x  = floor (($x2 + ($row+1)*$self->_tile_drawn_w/2) / $self->_tile_drawn_w);
-   for my $tile_x ($first_tile_x..$last_tile_x){
-      push @tile_coordinates, [$tile_x, $row-$tile_x];
+   my $first_tile_y = floor (($x1 + ($row+1)*$self->_tile_drawn_w/2) / $self->_tile_drawn_w);
+   my $last_tile_y  = floor (($x2 + ($row+1)*$self->_tile_drawn_w/2) / $self->_tile_drawn_w);
+   for my $tile_y ($first_tile_y..$last_tile_y){
+      push @tile_coordinates, [$row-$tile_y, $tile_y];
    }
    return @tile_coordinates;
 }

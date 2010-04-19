@@ -22,13 +22,13 @@ my $dest_rect = SDL::Rect->new (100,100,100,100);
 
 # Get an event object to snapshot the SDL event queue
 my $event = SDL::Event->new();
-for(1..100){
+while(1){
    while ( SDL::Events::poll_event($event) ){
    #Get all events from the event queue in our event
       exit if ($event->type == SDL_QUIT) ;
    }
-   my ($u,$v,$w,$h) = (100,100,300,150);
-   $map->draw (surf=>$app, rect=>$dest_rect, u=>$u,v=>$v, x=>0,y=>0, w=>$w, h=>$h);
+   my ($u,$v,$w,$h) = (300,100,300,135);
+   $map->draw (surf=>$app, rect=>$dest_rect, u=>$u,v=>$v, x=>110,y=>100, w=>$w, h=>$h);
    
    SDL::Video::flip($app);
 }
